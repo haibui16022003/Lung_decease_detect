@@ -2,3 +2,5 @@
 Detect lung issues using deep learning
 
 Input data: https://www.kaggle.com/competitions/rsna-pneumonia-detection-challenge/data
+
+Change data path in main.py
