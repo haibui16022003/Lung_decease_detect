@@ -55,3 +55,26 @@ def create_loader(train_dataset, val_dataset):
         val_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False)
     return train_loader, val_loader
 
+
+class PneumoniaResnet18Model(pl.LightningModule):
+    def __init__(self, weight=1):
+        super.__init__()
+        self.model = torchvision.models.resnet18()
+        self.model.conv1 = torch.nn.Conv2d(
+            1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
+        )
+        # Change out_features of Resnet18 last fully connected layer from 512 -> 1
+        self.model.fc = torch.nn.Linear(in_features=512, out_features=1)
+
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-4)
+        self.loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor([weight]))
+
+        self.train_acc = torchmetrics.Accuracy()
+        self.val_acc = torchmetrics.Accuracy()
+
+    def forward(self, data):
+        pred = self.model(data)
+        return pred
+
+    def training_step(self):
+        pass
