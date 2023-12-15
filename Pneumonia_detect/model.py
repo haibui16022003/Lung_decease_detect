@@ -58,7 +58,7 @@ def create_loader(train_dataset, val_dataset):
 
 class PneumoniaResnet18Model(pl.LightningModule):
     def __init__(self, weight=1):
-        super.__init__()
+        super(PneumoniaResnet18Model, self).__init__()
         self.model = torchvision.models.resnet18()
         self.model.conv1 = torch.nn.Conv2d(
             1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
@@ -69,8 +69,8 @@ class PneumoniaResnet18Model(pl.LightningModule):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-4)
         self.loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor([weight]))
 
-        self.train_acc = torchmetrics.Accuracy()
-        self.val_acc = torchmetrics.Accuracy()
+        self.train_acc = torchmetrics.Accuracy(task="binary")
+        self.val_acc = torchmetrics.Accuracy(task="binary")
 
     def forward(self, data):
         pred = self.model(data)
@@ -88,7 +88,7 @@ class PneumoniaResnet18Model(pl.LightningModule):
 
         return loss
 
-    def training_epoch_end(self):
+    def on_training_epoch_end(self):
         self.log("Train Accuracy", self.train_acc.compute())
 
     def validation_step(self, batch, batch_index):
@@ -103,8 +103,28 @@ class PneumoniaResnet18Model(pl.LightningModule):
 
         return loss
 
-    def validation_epoch_end(self):
+    def on_validation_epoch_end(self):
         self.loh("Val Accuracy", self.val_acc.compute())
 
     def configure_optimizers(self):
         return [self.optimizer]
+
+
+# Create check point to save 10 best models base on validation accuracy
+checkpoint_callback = ModelCheckpoint(
+    monitor="Val Acc",
+    save_top_k=10,
+    mode="max"
+)
+
+
+def create_trainer(model, train_loader, val_loader):
+    trainer = pl.Trainer(
+        devices=1, logger=TensorBoardLogger(save_dir="log/"), log_every_n_steps=1,
+        callbacks=checkpoint_callback,
+        max_epochs=35
+    )
+    trainer.fit(model, train_loader, val_loader)
+
+
+
