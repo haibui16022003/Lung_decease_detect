@@ -76,5 +76,35 @@ class PneumoniaResnet18Model(pl.LightningModule):
         pred = self.model(data)
         return pred
 
-    def training_step(self):
-        pass
+    def training_step(self, batch, batch_index):
+        xray, label = batch
+        label = label.float()       # Convert label to float to compute Loss
+        pred = self(xray)[:, 0]
+        loss = self.loss_fn(pred, label)    # Compute Loss
+
+        # Log Loss and batch accuracy
+        self.log("Train Loss", loss)
+        self.log("Step Train Accuracy", self.train_acc(torch.sigmoid(pred), label.int()))
+
+        return loss
+
+    def training_epoch_end(self):
+        self.log("Train Accuracy", self.train_acc.compute())
+
+    def validation_step(self, batch, batch_index):
+        xray, label = batch
+        label = label.float()  # Convert label to float to compute Loss
+        pred = self(xray)[:, 0]
+        loss = self.loss_fn(pred, label)  # Compute Loss
+
+        # Log Loss and batch accuracy
+        self.log("Val Loss", loss)
+        self.log("Step Val Accuracy", self.val_acc(torch.sigmoid(pred), label.int()))
+
+        return loss
+
+    def validation_epoch_end(self):
+        self.loh("Val Accuracy", self.val_acc.compute())
+
+    def configure_optimizers(self):
+        return [self.optimizer]
